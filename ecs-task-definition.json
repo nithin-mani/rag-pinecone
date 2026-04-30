@@ -1,0 +1,52 @@
+{
+  "family": "rag-pinecone-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::808431466534:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::808431466534:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "rag-pinecone",
+      "image": "808431466534.dkr.ecr.us-east-1.amazonaws.com/rag-pinecone:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {"name": "OPENAI_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:OPENAI_API_KEY::"},
+        {"name": "PINECONE_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:PINECONE_API_KEY::"},
+        {"name": "PINECONE_ENVIRONMENT", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:PINECONE_ENVIRONMENT::"},
+        {"name": "PINECONE_INDEX_NAME", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:PINECONE_INDEX_NAME::"},
+        {"name": "PINECONE_NAMESPACE", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:PINECONE_NAMESPACE::"},
+        {"name": "PINECONE_EMBEDDING_DIM", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:PINECONE_EMBEDDING_DIM::"},
+        {"name": "OPENAI_EMBEDDING_MODEL", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:OPENAI_EMBEDDING_MODEL::"},
+        {"name": "OPENAI_CHAT_MODEL", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:OPENAI_CHAT_MODEL::"},
+        {"name": "OPENAI_TEMPERATURE", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:OPENAI_TEMPERATURE::"},
+        {"name": "APP_ENV", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:APP_ENV::"},
+        {"name": "VALID_API_KEYS", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:VALID_API_KEYS::"},
+        {"name": "SIMILARITY_THRESHOLD", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:SIMILARITY_THRESHOLD::"},
+        {"name": "LOG_LEVEL", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:LOG_LEVEL::"},
+        {"name": "USER_AGENT", "valueFrom": "arn:aws:secretsmanager:us-east-1:808431466534:secret:rag-pinecone/prod:USER_AGENT::"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/rag-pinecone",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 15
+      }
+    }
+  ]
+}
