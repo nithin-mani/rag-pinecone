@@ -63,3 +63,27 @@ class IndexStatsResponse(BaseModel):
     total_vector_count: int
     namespaces: Dict[str, int]
     dimension: int
+
+# ─── Chat ─────────────────────────────────────────────
+class ChatRequest(BaseModel):
+    question: str = Field(..., min_length=3, max_length=1000)
+    session_id: str = Field(..., description="Unique session ID for conversation history")
+    top_k: Optional[int] = Field(None, ge=1, le=20)
+    namespace_filter: Optional[Dict[str, Any]] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "question": "What is RAG?",
+                "session_id": "user-123",
+                "top_k": 5,
+            }
+        }
+    }
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: List[str]
+    session_id: str
+    turn: int

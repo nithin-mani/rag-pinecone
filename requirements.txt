@@ -31,6 +31,7 @@ langchain-community==0.3.31
 langchain-core==0.3.84
 langchain-openai==0.3.35
 langchain-pinecone==0.2.13
+langchain-protocol==0.0.14
 langchain-text-splitters==0.3.11
 langsmith==0.4.37
 limits==4.2
