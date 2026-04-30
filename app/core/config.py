@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
     @property
     def api_keys(self) -> List[str]:
         return [k.strip() for k in self.valid_api_keys.split(",") if k.strip()]
