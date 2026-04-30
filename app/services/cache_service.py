@@ -13,6 +13,18 @@ logger = get_logger(__name__)
 CACHE_TTL_SECONDS = 60 * 60  # 1 hour
 
 
+def _make_serializable(obj):
+    """Recursively convert non-serializable objects to strings."""
+    if isinstance(obj, dict):
+        return {k: _make_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_make_serializable(i) for i in obj]
+    elif isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    else:
+        return str(obj)
+
+
 class CacheService:
     def __init__(self):
         self.settings = get_settings()
@@ -34,7 +46,6 @@ class CacheService:
         return self._client
 
     def _make_key(self, question: str, top_k: int) -> str:
-        """Deterministic cache key based on question + top_k."""
         raw = f"{question.strip().lower()}:{top_k}"
         return "rag:" + hashlib.md5(raw.encode()).hexdigest()
 
@@ -58,13 +69,14 @@ class CacheService:
             return
         try:
             key = self._make_key(question, top_k)
-            client.setex(key, CACHE_TTL_SECONDS, json.dumps(result))
+            # Make sure everything is serializable
+            clean_result = _make_serializable(result)
+            client.setex(key, CACHE_TTL_SECONDS, json.dumps(clean_result))
             logger.info("Cache set", question=question[:60])
         except Exception as e:
             logger.warning("Cache set failed", error=str(e))
 
     def invalidate(self, pattern: str = "rag:*") -> int:
-        """Delete all cached RAG responses — useful after new ingestion."""
         client = self._get_client()
         if not client:
             return 0
