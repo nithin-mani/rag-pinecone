@@ -22,3 +22,21 @@ async def index_stats(_: str = Depends(verify_api_key)):
     """Returns total vector count and per-namespace breakdown."""
     stats = get_pinecone_service().get_index_stats()
     return IndexStatsResponse(**stats)
+
+@router.post("/debug/search")
+async def debug_search(
+    question: str,
+    _: str = Depends(verify_api_key),
+):
+    """Raw Pinecone search with scores — for debugging only."""
+    from app.services.pinecone_service import get_pinecone_service
+    vs = get_pinecone_service().get_vector_store()
+    results = vs.similarity_search_with_score(query=question, k=5)
+    return [
+        {
+            "score": float(score),
+            "content": doc.page_content[:200],
+            "metadata": doc.metadata,
+        }
+        for doc, score in results
+    ]
