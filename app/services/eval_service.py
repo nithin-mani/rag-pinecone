@@ -17,6 +17,9 @@ from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.services.pinecone_service import get_pinecone_service
 
+import asyncio
+import concurrent.futures
+
 logger = get_logger(__name__)
 
 
@@ -44,13 +47,8 @@ class EvalService:
         contexts: List[str],
         ground_truth: Optional[str] = None,
     ) -> dict:
-        """
-        Evaluate a single QA pair.
-        Returns scores for faithfulness, answer relevancy, context precision.
-        """
         logger.info("Evaluating single QA pair", question=question[:60])
 
-        # Build RAGAS dataset
         data = {
             "question": [question],
             "answer": [answer],
@@ -60,26 +58,29 @@ class EvalService:
             data["ground_truth"] = [ground_truth]
 
         dataset = Dataset.from_dict(data)
-
-        # Run evaluation
         metrics = [faithfulness, answer_relevancy, context_precision]
+        llm = self._get_llm()
+        embeddings = self._get_embeddings()
 
-        result = evaluate(
-            dataset=dataset,
-            metrics=metrics,
-            llm=self._get_llm(),
-            embeddings=self._get_embeddings(),
-        )
+        # Run in thread to avoid nested event loop conflict with uvloop
+        def _run():
+            return evaluate(
+                dataset=dataset,
+                metrics=metrics,
+                llm=llm,
+                embeddings=embeddings,
+            )
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(_run)
+            result = future.result(timeout=120)
 
         scores = result.to_pandas().to_dict(orient="records")[0]
-
-        # Clean up scores
         cleaned = {
             "faithfulness": round(float(scores.get("faithfulness", 0)), 4),
             "answer_relevancy": round(float(scores.get("answer_relevancy", 0)), 4),
             "context_precision": round(float(scores.get("context_precision", 0)), 4),
         }
-
         logger.info("Evaluation complete", scores=cleaned)
         return cleaned
 
@@ -90,10 +91,6 @@ class EvalService:
         contexts: List[List[str]],
         ground_truths: Optional[List[str]] = None,
     ) -> dict:
-        """
-        Evaluate a batch of QA pairs.
-        Returns per-row scores and aggregate averages.
-        """
         logger.info("Evaluating dataset", size=len(questions))
 
         data = {
@@ -105,30 +102,30 @@ class EvalService:
             data["ground_truth"] = ground_truths
 
         dataset = Dataset.from_dict(data)
-
         metrics = [faithfulness, answer_relevancy, context_precision]
+        llm = self._get_llm()
+        embeddings = self._get_embeddings()
 
-        result = evaluate(
-            dataset=dataset,
-            metrics=metrics,
-            llm=self._get_llm(),
-            embeddings=self._get_embeddings(),
-        )
+        def _run():
+            return evaluate(
+                dataset=dataset,
+                metrics=metrics,
+                llm=llm,
+                embeddings=embeddings,
+            )
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(_run)
+            result = future.result(timeout=120)
 
         df = result.to_pandas()
-
-        # Per row scores
         rows = df[["question", "faithfulness", "answer_relevancy", "context_precision"]].to_dict(orient="records")
-
-        # Aggregate averages
         averages = {
             "faithfulness": round(float(df["faithfulness"].mean()), 4),
             "answer_relevancy": round(float(df["answer_relevancy"].mean()), 4),
             "context_precision": round(float(df["context_precision"].mean()), 4),
         }
-
         logger.info("Dataset evaluation complete", averages=averages)
-
         return {
             "averages": averages,
             "rows": rows,
