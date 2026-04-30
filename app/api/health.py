@@ -57,3 +57,21 @@ async def debug_redis(_: str = Depends(verify_api_key)):
         return {"status": "connected", "redis_url": settings.redis_url[:30]}
     except Exception as e:
         return {"status": "failed", "error": str(e)}
+
+
+@router.get("/debug/cache-test")
+async def debug_cache_test(_: str = Depends(verify_api_key)):
+    """Test Redis cache set and get directly."""
+    from app.services.cache_service import get_cache_service
+    cache = get_cache_service()
+    
+    # Test set
+    cache.set("test question", 5, {"answer": "test answer", "sources": [], "context_docs": [], "from_cache": False})
+    
+    # Test get
+    result = cache.get("test question", 5)
+    
+    if result:
+        return {"status": "cache working", "result": result}
+    else:
+        return {"status": "cache NOT working"}
