@@ -40,3 +40,20 @@ async def debug_search(
         }
         for doc, score in results
     ]
+
+@router.get("/debug/redis")
+async def debug_redis(_: str = Depends(verify_api_key)):
+    """Check Redis connection status."""
+    import redis as redis_lib
+    from app.core.config import get_settings
+    settings = get_settings()
+    try:
+        client = redis_lib.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=2,
+        )
+        client.ping()
+        return {"status": "connected", "redis_url": settings.redis_url[:30]}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
