@@ -28,6 +28,7 @@ class QueryResponse(BaseModel):
     sources: List[str]
     context_docs: List[ContextDoc]
     question: str
+    from_cache: bool = False
 
 
 # ─── Ingest ───────────────────────────────────────────
