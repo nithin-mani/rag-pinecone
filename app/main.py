@@ -12,7 +12,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging, get_logger
-from app.api import health, ingest, query, chat
+from app.api import health, ingest, query, chat, eval
 
 setup_logging()
 logger = get_logger(__name__)
@@ -78,6 +78,7 @@ app.include_router(health.router)
 app.include_router(ingest.router, prefix="/api/v1")
 app.include_router(query.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(eval.router, prefix="/api/v1")
 
 
 # ─── Global error handler ─────────────────────────────
